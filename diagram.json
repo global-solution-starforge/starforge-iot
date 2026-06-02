@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "author": "StarForge",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-esp32-devkit-v1", "id": "esp32", "top": 100.7, "left": -5, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot1", "top": -49.3, "left": 153.4, "attrs": { "value": "0" } },
+    { "type": "wokwi-pushbutton", "id": "btn1", "top": 205, "left": -335.8, "rotate": 180, "attrs": { "color": "green" } },
+    { "type": "wokwi-led", "id": "ledR", "top": 34.8, "left": -313, "attrs": { "color": "red" } },
+    { "type": "wokwi-led", "id": "ledY", "top": 73.2, "left": -313, "attrs": { "color": "yellow" } },
+    { "type": "wokwi-led", "id": "ledG", "top": 121.2, "left": -313, "attrs": { "color": "green" } },
+    { "type": "wokwi-buzzer", "id": "buz1", "top": -122.4, "left": -171, "attrs": { "volume": "0.5" } },
+    { "type": "wokwi-ssd1306", "id": "oled1", "top": 313.9, "left": -180.5, "attrs": { "address": "0x3C" } }
+  ],
+  "connections": [
+    ["esp32:TX0", "$serialMonitor:RX", "", []],
+    ["esp32:RX0", "$serialMonitor:TX", "", []],
+
+    ["pot1:VCC",    "esp32:3V3",   "red",    ["v240", "h-106.1"]],
+    ["pot1:SIG",    "esp32:D34",   "orange", ["v57.6", "h-202", "v77"]],
+    ["esp32:GND.1", "pot1:GND",    "black",  ["h0"]],
+
+    ["btn1:1.l",  "esp32:D14",   "green", ["h9.6", "v-22", "h220.2", "v2.7"]],
+    ["btn1:2.l",  "esp32:GND.2", "black", ["h29", "v25.8", "h9.6", "v0.1"]],
+
+    ["ledR:A",    "esp32:D25",   "red",    ["h240", "v28.8"]],
+    ["ledR:K",    "esp32:GND.2", "black",  ["h10", "v180"]],
+    ["ledY:A",    "esp32:D26",   "yellow", ["h230.4", "v67.3"]],
+    ["ledY:K",    "esp32:GND.2", "black",  ["h10", "v140"]],
+    ["ledG:A",    "esp32:D27",   "green",  ["v48", "h268", "v0.3"]],
+    ["ledG:K",    "esp32:GND.2", "black",  ["h10", "v90"]],
+
+    ["buz1:1",    "esp32:D32",   "purple", ["h115.2", "v105.7"]],
+    ["buz1:2",    "esp32:GND.2", "black",  ["h-1", "v10", "h-311", "v297.2", "h446"]],
+
+    ["oled1:SDA", "esp32:D21",   "blue",   ["v20", "*", "v-20"]],
+    ["oled1:SCL", "esp32:D22",   "yellow", ["v30", "*", "v-20"]],
+    ["oled1:VCC", "esp32:3V3",   "red",    ["v10", "*", "v-30"]],
+    ["oled1:GND", "esp32:GND.1", "black",  ["v-18.7", "h201.8", "v-76.7"]]
+  ],
+  "dependencies": {}
+}

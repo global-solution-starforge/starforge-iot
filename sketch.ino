@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StarForge — Mission Control</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+  <style>
+    :root {
+      --laranja:       #E8571A;
+      --laranja-claro: #FF7A3D;
+      --laranja-escuro:#B84210;
+      --preto:         #0A0A0A;
+      --preto-card:    #111111;
+      --preto-item:    #1A1A1A;
+      --borda:         #2A2A2A;
+      --branco:        #F5F5F5;
+      --branco-muted:  #999999;
+      --verde:         #00E676;
+      --amarelo:       #FFB300;
+      --vermelho:      #F44336;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--preto);
+      color: var(--branco);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 6px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--laranja-escuro), var(--laranja));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      background: linear-gradient(90deg, var(--laranja), var(--laranja-claro));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      font-size: 0.8rem;
+      color: var(--branco-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .conexao-status {
+      display: inline-block;
+      font-size: 0.72rem;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-top: 10px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .conectado    { background: #0a2a1a; color: var(--verde);    border: 1px solid var(--verde); }
+    .desconectado { background: #2a0a0a; color: var(--vermelho); border: 1px solid var(--vermelho); }
+    .conectando   { background: #2a1a00; color: var(--amarelo);  border: 1px solid var(--amarelo); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    @media (max-width: 680px) { .layout { grid-template-columns: 1fr; } }
+
+    .col { display: flex; flex-direction: column; gap: 16px; }
+
+    .card {
+      background: var(--preto-card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .card-titulo {
+      font-size: 0.65rem;
+      color: var(--branco-muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-titulo::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 12px;
+      background: var(--laranja);
+      border-radius: 2px;
+    }
+
+    .missao-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .missao-tab {
+      flex: 1;
+      padding: 10px 4px;
+      background: var(--preto-item);
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      color: var(--branco-muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .missao-tab:hover        { border-color: var(--laranja); color: var(--laranja-claro); }
+    .missao-tab.ativa        { background: #1a0d00; border-color: var(--laranja); color: var(--laranja-claro); }
+    .missao-tab.desbloqueada { border-color: var(--verde); color: var(--verde); background: #001a0d; }
+
+    .missao-nome  { font-size: 0.85rem; color: var(--branco-muted); margin-bottom: 8px; }
+    .valor-grande { font-size: 3.5rem; font-weight: 800; color: var(--branco); line-height: 1; margin-bottom: 6px; }
+
+    .barra-container {
+      background: var(--preto-item);
+      border-radius: 6px;
+      height: 18px;
+      margin: 14px 0 12px;
+      overflow: hidden;
+      border: 1px solid var(--borda);
+    }
+
+    .barra-fill {
+      height: 100%;
+      border-radius: 6px;
+      width: 0%;
+      transition: width 0.7s ease, background 0.7s ease;
+      background: linear-gradient(90deg, var(--laranja-escuro), var(--laranja-claro));
+    }
+
+    .barra-fill.meta { background: linear-gradient(90deg, #00a84f, var(--verde)); }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 16px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .aguardando  { background: #1a1a1a; color: var(--branco-muted); border: 1px solid var(--borda); }
+    .financiando { background: #1a1000; color: var(--amarelo);      border: 1px solid var(--amarelo); }
+    .em-orbita   { background: #001a0d; color: var(--verde);        border: 1px solid var(--verde); }
+
+    .grid-tele { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .tele-item {
+      background: var(--preto-item);
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .tele-label {
+      font-size: 0.62rem;
+      color: var(--branco-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .tele-valor { font-size: 1.3rem; font-weight: 700; color: var(--laranja-claro); }
+
+    .input-field {
+      width: 100%;
+      background: var(--preto-item);
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      color: var(--branco);
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .input-field:focus { outline: none; border-color: var(--laranja); }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .slider-row input[type="range"] { flex: 1; accent-color: var(--laranja); height: 4px; }
+
+    .slider-val { min-width: 44px; text-align: right; font-weight: 700; color: var(--laranja-claro); font-size: 1rem; }
+
+    .btn-contribuir {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, var(--laranja-escuro), var(--laranja-claro));
+      color: white;
+      letter-spacing: 1px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-contribuir:hover  { opacity: 0.88; }
+    .btn-contribuir:active { transform: scale(0.98); }
+
+    .btn-reset {
+      width: 100%;
+      padding: 11px;
+      background: transparent;
+      color: var(--vermelho);
+      border: 1px solid var(--vermelho);
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.2s;
+    }
+
+    .btn-reset:hover { background: #2a0000; }
+
+    .ranking-lista { list-style: none; }
+
+    .ranking-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--borda);
+    }
+
+    .ranking-item:last-child { border-bottom: none; }
+
+    .ranking-pos {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .pos-1 { background: #2a1a00; color: #FFD700; border: 1px solid #FFD700; }
+    .pos-2 { background: #1a1a22; color: #C0C0C0; border: 1px solid #C0C0C0; }
+    .pos-3 { background: #1a1000; color: #CD7F32; border: 1px solid #CD7F32; }
+    .pos-n { background: var(--preto-item); color: var(--branco-muted); border: 1px solid var(--borda); }
+
+    .ranking-nome  { flex: 1; font-size: 0.9rem; color: var(--branco); }
+    .ranking-valor { font-weight: 700; color: var(--laranja-claro); font-size: 0.9rem; }
+    .ranking-vazio { text-align: center; color: var(--branco-muted); font-size: 0.85rem; padding: 24px 0; }
+    .ranking-total { margin-top: 12px; font-size: 0.72rem; color: var(--branco-muted); text-align: right; }
+
+    .celebracao {
+      display: none;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 16px;
+      color: var(--verde);
+      border: 1px solid var(--verde);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 1000px;
+      background: #001a0d;
+      animation: pulsar 1s ease-in-out infinite alternate;
+      letter-spacing: 1px;
+    }
+
+    @keyframes pulsar { from { opacity: 0.75; } to { opacity: 1.0; } }
+
+    .log-box {
+      background: #080808;
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      padding: 10px 12px;
+      height: 140px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      color: var(--branco-muted);
+    }
+
+    .log-box p      { margin-bottom: 3px; line-height: 1.5; }
+    .log-box p.ok   { color: var(--verde); }
+    .log-box p.info { color: var(--laranja-claro); }
+    .log-box p.warn { color: var(--amarelo); }
+    .log-box p.err  { color: var(--vermelho); }
+
+    .divisor { width: 100%; max-width: 1000px; height: 1px; background: var(--borda); margin: 4px 0 20px; }
+    .rodape  { font-size: 0.68rem; color: #444; margin-top: 24px; text-align: center; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-area">
+      <div class="logo-icon">🛰️</div>
+      <h1>STARFORGE</h1>
+    </div>
+    <p>Mission Control Center</p>
+    <span class="conexao-status conectando" id="statusConexao">Conectando ao broker...</span>
+  </header>
+
+  <div class="divisor"></div>
+
+  <div class="celebracao" id="celebracao">🚀 Missão Desbloqueada! Avançando para a próxima...</div>
+
+  <div class="layout">
+    <div class="col">
+
+      <div class="card">
+        <div class="card-titulo">Missões</div>
+        <div class="missao-tabs" id="missaoTabs">
+          <div class="missao-tab ativa" onclick="selecionarMissao(0)">BR-01</div>
+          <div class="missao-tab"       onclick="selecionarMissao(1)">BR-02</div>
+          <div class="missao-tab"       onclick="selecionarMissao(2)">BR-03</div>
+        </div>
+        <div class="missao-nome" id="missaoNome">CubeSat BR-01</div>
+        <div class="valor-grande" id="progresso">0%</div>
+        <div class="barra-container">
+          <div class="barra-fill" id="barra"></div>
+        </div>
+        <span class="status-badge aguardando" id="badge">aguardando</span>
+      </div>
+
+      <div class="card">
+        <div class="card-titulo">Telemetria do Satélite</div>
+        <div class="grid-tele">
+          <div class="tele-item">
+            <div class="tele-label">Temperatura</div>
+            <div class="tele-valor" id="temperatura">--°C</div>
+          </div>
+          <div class="tele-item">
+            <div class="tele-label">Última atualização</div>
+            <div class="tele-valor" id="ultimoUpdate" style="font-size:0.8rem;color:#666">--</div>
+          </div>
+          <div class="tele-item">
+            <div class="tele-label">Missão ativa</div>
+            <div class="tele-valor" id="missaoIdx" style="font-size:1rem">--</div>
+          </div>
+          <div class="tele-item">
+            <div class="tele-label">IP ESP32</div>
+            <div class="tele-valor" id="ipDisplay" style="font-size:0.75rem;color:#666">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-titulo">Log MQTT</div>
+        <div class="log-box" id="logBox"></div>
+      </div>
+
+    </div>
+
+    <div class="col">
+
+      <div class="card">
+        <div class="card-titulo">Contribuição</div>
+        <input class="input-field" type="text" id="nomeContribuidor"
+          placeholder="Seu nome (ex: Astronauta João)">
+        <div class="slider-row">
+          <input type="range" id="slider" min="1" max="20" value="10"
+            oninput="document.getElementById('sliderVal').textContent = this.value + '%'">
+          <span class="slider-val" id="sliderVal">10%</span>
+        </div>
+        <button class="btn-contribuir" onclick="contribuir()">
+          💰 Confirmar Contribuição
+        </button>
+        <button class="btn-reset" onclick="confirmarReset()">
+          ↺ Reiniciar Todas as Missões
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-titulo">🏆 Ranking de Contribuidores</div>
+        <ul class="ranking-lista" id="rankingLista">
+          <li class="ranking-vazio">Nenhuma contribuição ainda</li>
+        </ul>
+        <div class="ranking-total" id="totalContribuicoes"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="rodape">MQTT · test.mosquitto.org · starforge/# · bidirecional</p>
+
+  <script>
+    const BROKER = 'test.mosquitto.org';
+    const PORT   = 8080;
+
+    const TOPICOS_SUB = [
+      'starforge/mission/telemetria',
+      'starforge/mission/progress',
+      'starforge/mission/status',
+      'starforge/mission/ranking',
+      'starforge/mission/unlocked',
+      'starforge/mission/list'
+    ];
+
+    const CMD_CONTRIBUTE = 'starforge/cmd/contribute';
+    const CMD_RESET      = 'starforge/cmd/reset';
+    const CMD_SELECT     = 'starforge/cmd/select';
+
+    let client;
+    let missaoAtualLocal = 0;
+
+    function log(msg, tipo = 'info') {
+      const box = document.getElementById('logBox');
+      const p   = document.createElement('p');
+      p.className   = tipo;
+      p.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+      box.appendChild(p);
+      box.scrollTop = box.scrollHeight;
+      while (box.children.length > 100) box.removeChild(box.firstChild);
+    }
+
+    function atualizarTabs(missoes) {
+      if (!missoes) return;
+      const tabs = document.querySelectorAll('.missao-tab');
+      missoes.forEach((m, i) => {
+        if (!tabs[i]) return;
+        tabs[i].className = 'missao-tab' +
+          (m.ativa        ? ' ativa'        : '') +
+          (m.desbloqueada ? ' desbloqueada' : '');
+      });
+    }
+
+    function atualizarRanking(dados) {
+      const lista = document.getElementById('rankingLista');
+      const total = document.getElementById('totalContribuicoes');
+      if (!dados.ranking || dados.ranking.length === 0) {
+        lista.innerHTML   = '<li class="ranking-vazio">Nenhuma contribuição ainda</li>';
+        total.textContent = '';
+        return;
+      }
+      lista.innerHTML = '';
+      dados.ranking.forEach(item => {
+        const posClass = item.pos <= 3 ? 'pos-' + item.pos : 'pos-n';
+        const li = document.createElement('li');
+        li.className = 'ranking-item';
+        li.innerHTML = `
+          <div class="ranking-pos ${posClass}">${item.pos}</div>
+          <div class="ranking-nome">${item.nome}</div>
+          <div class="ranking-valor">+${item.valor}%</div>
+        `;
+        lista.appendChild(li);
+      });
+      if (dados.total !== undefined) {
+        total.textContent = 'Total de contribuições: ' + dados.total;
+      }
+    }
+
+    function atualizarUI(dados) {
+      if (dados.progresso !== undefined) {
+        const p = parseInt(dados.progresso);
+        document.getElementById('progresso').textContent = p + '%';
+        document.getElementById('barra').style.width     = p + '%';
+        document.getElementById('barra').className =
+          'barra-fill' + (p >= 100 ? ' meta' : '');
+      }
+      if (dados.missao !== undefined) {
+        document.getElementById('missaoNome').textContent = dados.missao;
+      }
+      if (dados.missao_idx !== undefined) {
+        missaoAtualLocal = parseInt(dados.missao_idx);
+        document.getElementById('missaoIdx').textContent =
+          'Missão ' + (missaoAtualLocal + 1) + ' / 3';
+        document.querySelectorAll('.missao-tab').forEach((t, i) => {
+          if (!t.classList.contains('desbloqueada')) {
+            t.classList.toggle('ativa', i === missaoAtualLocal);
+          }
+        });
+      }
+      if (dados.status !== undefined) {
+        const badge = document.getElementById('badge');
+        badge.textContent = dados.status;
+        badge.className   = 'status-badge ' +
+          (dados.status === 'financiando' ? 'financiando' :
+           dados.status === 'em orbita'   ? 'em-orbita'   : 'aguardando');
+      }
+      if (dados.temperatura !== undefined) {
+        document.getElementById('temperatura').textContent = dados.temperatura + '°C';
+      }
+      if (dados.ip !== undefined && dados.ip !== '') {
+        document.getElementById('ipDisplay').textContent = dados.ip;
+      }
+      if (dados.meta_atingida !== undefined) {
+        document.getElementById('celebracao').style.display =
+          dados.meta_atingida ? 'block' : 'none';
+      }
+      document.getElementById('ultimoUpdate').textContent =
+        new Date().toLocaleTimeString();
+    }
+
+    function publicar(topico, payload) {
+      if (!client || !client.isConnected()) {
+        log('MQTT desconectado — comando não enviado', 'err');
+        return false;
+      }
+      const msg = new Paho.MQTT.Message(JSON.stringify(payload));
+      msg.destinationName = topico;
+      msg.retained        = false;
+      client.send(msg);
+      return true;
+    }
+
+    function contribuir() {
+      const nome  = document.getElementById('nomeContribuidor').value.trim() || 'Anonimo';
+      const valor = parseInt(document.getElementById('slider').value);
+      if (publicar(CMD_CONTRIBUTE, { nome, valor })) {
+        log('Contribuição enviada: ' + nome + ' +' + valor + '%', 'ok');
+      }
+    }
+
+    function confirmarReset() {
+      if (!confirm('Tem certeza? Isso reinicia TODAS as missões e rankings.')) return;
+      if (publicar(CMD_RESET, { confirm: true })) {
+        log('Reset enviado via MQTT', 'warn');
+        document.getElementById('celebracao').style.display = 'none';
+      }
+    }
+
+    function selecionarMissao(idx) {
+      if (publicar(CMD_SELECT, { idx })) {
+        log('Selecionando missão ' + (idx + 1), 'info');
+        document.getElementById('celebracao').style.display = 'none';
+      }
+    }
+
+    function conectarMQTT() {
+      client = new Paho.MQTT.Client(BROKER, PORT, 'starforge-dash-001');
+
+      client.onConnectionLost = (res) => {
+        document.getElementById('statusConexao').textContent = '● Desconectado';
+        document.getElementById('statusConexao').className   = 'conexao-status desconectado';
+        log('Conexão perdida: ' + res.errorMessage, 'err');
+        setTimeout(conectarMQTT, 4000);
+      };
+
+      client.onMessageArrived = (msg) => {
+        const topico  = msg.destinationName;
+        const payload = msg.payloadString;
+        const chave   = topico.split('/').pop();
+        log('[' + chave + '] ' + payload.substring(0, 90) + (payload.length > 90 ? '...' : ''));
+
+        try {
+          if (topico === 'starforge/mission/telemetria') {
+            atualizarUI(JSON.parse(payload)); return;
+          }
+          if (topico === 'starforge/mission/ranking') {
+            atualizarRanking(JSON.parse(payload)); return;
+          }
+          if (topico === 'starforge/mission/list') {
+            atualizarTabs(JSON.parse(payload).missoes); return;
+          }
+          if (topico === 'starforge/mission/unlocked') {
+            const d   = JSON.parse(payload);
+            const cel = document.getElementById('celebracao');
+            cel.style.display = 'block';
+            cel.textContent   = '🚀 ' + d.missao + ' Desbloqueada! Avançando para a próxima...';
+            log('DESBLOQUEADA: ' + d.missao, 'ok');
+            setTimeout(() => { cel.style.display = 'none'; }, 8000);
+            return;
+          }
+          if (topico === 'starforge/mission/progress') {
+            atualizarUI({ progresso: parseInt(payload) }); return;
+          }
+          if (topico === 'starforge/mission/status') {
+            atualizarUI({ status: payload }); return;
+          }
+        } catch(e) {
+          log('Erro parse: ' + e.message, 'err');
+        }
+      };
+
+      document.getElementById('statusConexao').textContent = 'Conectando...';
+      document.getElementById('statusConexao').className   = 'conexao-status conectando';
+
+      client.connect({
+        onSuccess: () => {
+          document.getElementById('statusConexao').textContent = '● Conectado ao MQTT';
+          document.getElementById('statusConexao').className   = 'conexao-status conectado';
+          log('Conectado ao test.mosquitto.org', 'ok');
+          TOPICOS_SUB.forEach(t => {
+            client.subscribe(t);
+            log('Inscrito: ' + t, 'info');
+          });
+        },
+        onFailure: (err) => {
+          document.getElementById('statusConexao').textContent = '● Erro de conexão';
+          document.getElementById('statusConexao').className   = 'conexao-status desconectado';
+          log('Falha MQTT: ' + err.errorMessage, 'err');
+          setTimeout(conectarMQTT, 4000);
+        },
+        useSSL:            false,
+        timeout:           10,
+        keepAliveInterval: 30
+      });
+    }
+
+    conectarMQTT();
+  </script>
+</body>
+</html>

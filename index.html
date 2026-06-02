@@ -153,8 +153,8 @@
     .missao-tab.ativa        { background: #1a0d00; border-color: var(--laranja); color: var(--laranja-claro); }
     .missao-tab.desbloqueada { border-color: var(--verde); color: var(--verde); background: #001a0d; }
 
-    .missao-nome   { font-size: 0.85rem; color: var(--branco-muted); margin-bottom: 8px; }
-    .valor-grande  { font-size: 3.5rem; font-weight: 800; color: var(--branco); line-height: 1; margin-bottom: 6px; }
+    .missao-nome  { font-size: 0.85rem; color: var(--branco-muted); margin-bottom: 8px; }
+    .valor-grande { font-size: 3.5rem; font-weight: 800; color: var(--branco); line-height: 1; margin-bottom: 6px; }
 
     .barra-container {
       background: var(--preto-item);
@@ -231,7 +231,6 @@
     }
 
     .slider-row input[type="range"] { flex: 1; accent-color: var(--laranja); height: 4px; }
-
     .slider-val { min-width: 44px; text-align: right; font-weight: 700; color: var(--laranja-claro); font-size: 1rem; }
 
     .btn-contribuir {
@@ -333,11 +332,11 @@
       color: var(--branco-muted);
     }
 
-    .log-box p          { margin-bottom: 3px; line-height: 1.5; }
-    .log-box p.ok       { color: var(--verde); }
-    .log-box p.info     { color: var(--laranja-claro); }
-    .log-box p.warn     { color: var(--amarelo); }
-    .log-box p.err      { color: var(--vermelho); }
+    .log-box p      { margin-bottom: 3px; line-height: 1.5; }
+    .log-box p.ok   { color: var(--verde); }
+    .log-box p.info { color: var(--laranja-claro); }
+    .log-box p.warn { color: var(--amarelo); }
+    .log-box p.err  { color: var(--vermelho); }
 
     .divisor { width: 100%; max-width: 1000px; height: 1px; background: var(--borda); margin: 4px 0 20px; }
     .rodape  { font-size: 0.68rem; color: #444; margin-top: 24px; text-align: center; letter-spacing: 1px; }
@@ -435,11 +434,11 @@
     </div>
   </div>
 
-  <p class="rodape">MQTT · broker.hivemq.com · starforge/# · bidirecional</p>
+  <p class="rodape">MQTT · broker.emqx.io · starforge/# · bidirecional</p>
 
   <script>
-    const BROKER = 'broker.hivemq.com';
-    const PORT   = 8000;
+    const BROKER = 'broker.emqx.io';
+    const PORT   = 8083;
 
     const TOPICOS_SUB = [
       'starforge/mission/telemetria',
@@ -633,7 +632,7 @@
         onSuccess: () => {
           document.getElementById('statusConexao').textContent = '● Conectado ao MQTT';
           document.getElementById('statusConexao').className   = 'conexao-status conectado';
-          log('Conectado ao broker.hivemq.com', 'ok');
+          log('Conectado ao broker.emqx.io', 'ok');
           TOPICOS_SUB.forEach(t => {
             client.subscribe(t);
             log('Inscrito: ' + t, 'info');
